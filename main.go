@@ -3,8 +3,17 @@ package main
 import (
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/codegangsta/cli"
+	"github.com/dghubble/go-twitter/twitter"
+	"github.com/dghubble/oauth1"
+)
+
+const (
+	ExitCodeOK int = iota
+	ExitCodeArgumentError
+	ExitCodeTwitterError
 )
 
 func main() {
@@ -36,26 +45,46 @@ func main() {
 		},
 	}
 
-	app.Action = search
+	app.Action = searchAction
 
 	app.Run(os.Args)
 }
 
-func search(c *cli.Context) {
-
+func searchAction(c *cli.Context) error {
 	at := c.GlobalString("access_token")
 	as := c.GlobalString("access_secret")
 	ck := c.GlobalString("consumer_key")
 	cs := c.GlobalString("consumer_secret")
 
-	var msg = ""
-	if len(c.Args()) > 0 {
-		msg = c.Args().First()
-		msg += at
-		msg += as
-		msg += ck
-		msg += cs
+	if at == "false" || as == "false" || ck == "false" || cs == "false" {
+		return cli.NewExitError("Twitter OAuth keys must be set.", ExitCodeArgumentError)
+	}
+	if len(c.Args()) == 0 {
+		return cli.NewExitError("Search query must not be blank.", ExitCodeArgumentError)
 	}
 
-	fmt.Printf("%s\n", msg)
+	query := strings.Join(c.Args(), " ")
+
+	client := twClient(at, as, ck, cs)
+
+	search, err := search(query, client)
+	if err != nil {
+		return cli.NewExitError(err, ExitCodeTwitterError)
+	}
+	fmt.Printf("%s", search)
+	return nil
+}
+
+func search(query string, client *twitter.Client) (*twitter.Search, error) {
+	search, _, err := client.Search.Tweets(&twitter.SearchTweetParams{
+		Query: query,
+	})
+	return search, err
+}
+
+func twClient(at, as, ck, cs string) *twitter.Client {
+	config := oauth1.NewConfig(ck, cs)
+	token := oauth1.NewToken(at, as)
+	httpClient := config.Client(oauth1.NoContext, token)
+	return twitter.NewClient(httpClient)
 }
