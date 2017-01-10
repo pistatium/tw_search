@@ -11,7 +11,7 @@ import (
 )
 
 const (
-	ExitCodeOK int = iota
+	ExitCodeOK            int = iota
 	ExitCodeArgumentError
 	ExitCodeTwitterError
 )
@@ -23,22 +23,22 @@ func main() {
 	app.Version = "0.0.1"
 
 	app.Flags = []cli.Flag{
-		cli.BoolFlag{
+		cli.StringFlag{
 			Name:   "access_token, AT",
 			Usage:  "Twitter Access Token",
 			EnvVar: "TS_AT",
 		},
-		cli.BoolFlag{
+		cli.StringFlag{
 			Name:   "access_secret, AS",
 			Usage:  "Twitter Access Secret",
 			EnvVar: "TS_AS",
 		},
-		cli.BoolFlag{
+		cli.StringFlag{
 			Name:   "consumer_key, CK",
 			Usage:  "Twitter Consumer Key",
 			EnvVar: "TS_CK",
 		},
-		cli.BoolFlag{
+		cli.StringFlag{
 			Name:   "consumer_secret, CS",
 			Usage:  "Twitter Consumer Secret",
 			EnvVar: "TS_CS",
@@ -67,11 +67,13 @@ func searchAction(c *cli.Context) error {
 
 	client := twClient(at, as, ck, cs)
 
-	search, err := search(query, client)
+	result, err := search(query, client)
 	if err != nil {
 		return cli.NewExitError(err, ExitCodeTwitterError)
 	}
-	fmt.Printf("%s", search)
+	for i, tweet := range result.Statuses {
+		fmt.Printf("\n\n%2d-------\n%v", i+1, tweet.Text)
+	}
 	return nil
 }
 
