@@ -1,9 +1,9 @@
 package main
 
 import (
-	"fmt"
 	"os"
 	"strings"
+	"text/template"
 
 	"github.com/codegangsta/cli"
 	"github.com/dghubble/go-twitter/twitter"
@@ -11,9 +11,10 @@ import (
 )
 
 const (
-	ExitCodeOK            int = iota
+	ExitCodeOK                int = iota
 	ExitCodeArgumentError
 	ExitCodeTwitterError
+	ExitCodeTemplateLoadError
 )
 
 func main() {
@@ -71,9 +72,21 @@ func searchAction(c *cli.Context) error {
 	if err != nil {
 		return cli.NewExitError(err, ExitCodeTwitterError)
 	}
-	for i, tweet := range result.Statuses {
-		fmt.Printf("\n\n%2d-------\n%v", i+1, tweet.Text)
+	tpl, err := template.ParseFiles("templates/tweet.tpl")
+	if err != nil {
+		return cli.NewExitError(err, ExitCodeTemplateLoadError)
 	}
+
+	for i, tweet := range result.Statuses {
+		tpl.Execute(os.Stdout, struct {
+			Index int
+			Tweet twitter.Tweet
+		}{
+			Index: i,
+			Tweet: tweet,
+		})
+	}
+
 	return nil
 }
 
